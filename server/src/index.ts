@@ -27,24 +27,6 @@ app.get("/health", (_req, res) => {
   res.json({ ok: true });
 });
 
-// 임시 진단용 — PIN 값은 절대 노출하지 않고 파싱 결과만 확인
-app.get("/debug/pins-keys", (_req, res) => {
-  const raw = process.env.PINS_JSON ?? "";
-  try {
-    const pins = JSON.parse(raw);
-    res.json({
-      parsed: true,
-      keys: Object.keys(pins),
-      pinLengths: Object.fromEntries(
-        Object.entries(pins).map(([k, v]) => [k, String(v).length])
-      ),
-      rawLength: raw.length,
-    });
-  } catch (e) {
-    res.json({ parsed: false, error: String(e), rawLength: raw.length });
-  }
-});
-
 app.post("/auth/login", (req, res) => {
   const { person, pin } = req.body ?? {};
   if (typeof person !== "string" || typeof pin !== "string") {
