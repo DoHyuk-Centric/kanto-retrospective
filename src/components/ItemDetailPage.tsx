@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { supabase, ContentItem } from "@/lib/supabaseClient";
+import { getItem, ContentItem } from "@/lib/apiClient";
 import Markdown from "@/components/Markdown";
 
 export default function ItemDetailPage({
@@ -25,17 +25,17 @@ export default function ItemDetailPage({
   useEffect(() => {
     if (!id) return;
     let cancelled = false;
-    supabase
-      .from("content_items")
-      .select("*")
-      .eq("id", id)
-      .eq("category", category)
-      .eq("person", person)
-      .single()
-      .then(({ data, error }) => {
+    getItem(id)
+      .then((data) => {
         if (cancelled) return;
-        if (error) setError(error.message);
-        else setItem(data as ContentItem);
+        if (data.category !== category || data.person !== person) {
+          setItem(null);
+          return;
+        }
+        setItem(data);
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err.message ?? String(err));
       });
     return () => {
       cancelled = true;

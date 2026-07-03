@@ -2,7 +2,6 @@ import path from "path";
 import dotenv from "dotenv";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
 dotenv.config({ path: path.join(__dirname, "..", ".env") });
@@ -10,13 +9,12 @@ dotenv.config({ path: path.join(__dirname, "..", ".env") });
 const PEOPLE = ["박소유", "김도혁", "이동근", "임태형"] as const;
 const CATEGORIES = ["features", "troubleshooting", "ai-usage"] as const;
 
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const API_BASE_URL = process.env.API_BASE_URL;
 const MCP_PERSON = process.env.MCP_PERSON;
 const MCP_PIN = process.env.MCP_PIN;
 
-if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
-  console.error("SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY가 .env에 없습니다.");
+if (!API_BASE_URL) {
+  console.error("API_BASE_URL이 .env에 없습니다.");
   process.exit(1);
 }
 if (!MCP_PERSON || !(PEOPLE as readonly string[]).includes(MCP_PERSON)) {
@@ -31,13 +29,28 @@ if (!MCP_PIN) {
 }
 
 const person = MCP_PERSON as (typeof PEOPLE)[number];
-const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
-// 이 프로세스가 살아있는 동안만 유지되는 로그인 상태 (프로세스 재시작 시 다시 로그인 필요)
-let authenticated = false;
+// 이 프로세스가 살아있는 동안만 유지되는 토큰 (재시작 시 다시 login 필요)
+let sessionToken: string | null = null;
 
 function text(s: string) {
   return { content: [{ type: "text" as const, text: s }] };
+}
+
+async function api(
+  path: string,
+  init?: RequestInit
+): Promise<{ ok: boolean; status: number; body: unknown }> {
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
+      ...(init?.headers ?? {}),
+    },
+  });
+  const body = await res.json().catch(() => null);
+  return { ok: res.ok, status: res.status, body };
 }
 
 const server = new McpServer({
@@ -54,11 +67,18 @@ server.registerTool(
     inputSchema: { pin: z.string().describe("4자리 PIN") },
   },
   async ({ pin }) => {
-    if (pin === MCP_PIN) {
-      authenticated = true;
-      return text(`인증 성공. ${person}(으)로 로그인되었습니다.`);
+    if (pin !== MCP_PIN) return text("PIN이 일치하지 않습니다.");
+    const { ok, body } = await api("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ person, pin }),
+    });
+    if (!ok) {
+      return text(
+        `서버 인증 실패: ${(body as { error?: string })?.error ?? "알 수 없는 오류"}`
+      );
     }
-    return text("PIN이 일치하지 않습니다.");
+    sessionToken = (body as { token: string }).token;
+    return text(`인증 성공. ${person}(으)로 로그인되었습니다.`);
   }
 );
 
@@ -69,7 +89,7 @@ server.registerTool(
     description: "현재 세션의 인증 상태를 해제합니다.",
   },
   async () => {
-    authenticated = false;
+    sessionToken = null;
     return text("로그아웃되었습니다.");
   }
 );
@@ -81,9 +101,7 @@ server.registerTool(
     description: "이 MCP 서버가 어떤 사람으로 설정되어 있고 인증 상태인지 확인합니다.",
   },
   async () => {
-    return text(
-      `person=${person}, authenticated=${authenticated ? "예" : "아니오"}`
-    );
+    return text(`person=${person}, authenticated=${sessionToken ? "예" : "아니오"}`);
   }
 );
 
@@ -99,16 +117,13 @@ server.registerTool(
     },
   },
   async ({ category, person: targetPerson }) => {
-    const { data, error } = await supabase
-      .from("content_items")
-      .select("id, title, summary, sort_order, updated_at")
-      .eq("category", category)
-      .eq("person", targetPerson)
-      .order("sort_order", { ascending: true });
-
-    if (error) return text(`조회 실패: ${error.message}`);
-    if (!data || data.length === 0) return text("등록된 항목이 없습니다.");
-    return text(JSON.stringify(data, null, 2));
+    const { ok, body } = await api(
+      `/items?category=${encodeURIComponent(category)}&person=${encodeURIComponent(targetPerson)}`
+    );
+    if (!ok) return text(`조회 실패: ${(body as { error?: string })?.error}`);
+    const items = body as unknown[];
+    if (!items || items.length === 0) return text("등록된 항목이 없습니다.");
+    return text(JSON.stringify(items, null, 2));
   }
 );
 
@@ -125,29 +140,13 @@ server.registerTool(
     },
   },
   async ({ category, title, summary, body }) => {
-    if (!authenticated) return text("로그인이 필요합니다. login 도구를 먼저 사용하세요.");
-
-    const { count } = await supabase
-      .from("content_items")
-      .select("id", { count: "exact", head: true })
-      .eq("category", category)
-      .eq("person", person);
-
-    const { data, error } = await supabase
-      .from("content_items")
-      .insert({
-        category,
-        person,
-        title,
-        summary: summary ?? null,
-        body,
-        sort_order: count ?? 0,
-      })
-      .select("id")
-      .single();
-
-    if (error) return text(`추가 실패: ${error.message}`);
-    return text(`추가되었습니다. id=${data.id}`);
+    if (!sessionToken) return text("로그인이 필요합니다. login 도구를 먼저 사용하세요.");
+    const { ok, body: resBody } = await api("/items", {
+      method: "POST",
+      body: JSON.stringify({ category, title, summary, body }),
+    });
+    if (!ok) return text(`추가 실패: ${(resBody as { error?: string })?.error}`);
+    return text(`추가되었습니다. id=${(resBody as { id: string }).id}`);
   }
 );
 
@@ -157,38 +156,19 @@ server.registerTool(
     title: "항목 수정",
     description: `로그인한 본인(${person}) 소유의 항목만 수정할 수 있습니다.`,
     inputSchema: {
-      itemId: z.string().uuid(),
+      itemId: z.string(),
       title: z.string().optional(),
       summary: z.string().optional(),
       body: z.string().optional(),
     },
   },
   async ({ itemId, title, summary, body }) => {
-    if (!authenticated) return text("로그인이 필요합니다. login 도구를 먼저 사용하세요.");
-
-    const { data: existing, error: fetchErr } = await supabase
-      .from("content_items")
-      .select("person")
-      .eq("id", itemId)
-      .single();
-
-    if (fetchErr || !existing) return text("해당 항목을 찾을 수 없습니다.");
-    if (existing.person !== person) {
-      return text(`이 항목은 ${existing.person}의 항목이라 수정할 수 없습니다.`);
-    }
-
-    const update: Record<string, string> = {};
-    if (title !== undefined) update.title = title;
-    if (summary !== undefined) update.summary = summary;
-    if (body !== undefined) update.body = body;
-    if (Object.keys(update).length === 0) return text("수정할 내용이 없습니다.");
-
-    const { error } = await supabase
-      .from("content_items")
-      .update(update)
-      .eq("id", itemId);
-
-    if (error) return text(`수정 실패: ${error.message}`);
+    if (!sessionToken) return text("로그인이 필요합니다. login 도구를 먼저 사용하세요.");
+    const { ok, body: resBody } = await api(`/items/${encodeURIComponent(itemId)}`, {
+      method: "PATCH",
+      body: JSON.stringify({ title, summary, body }),
+    });
+    if (!ok) return text(`수정 실패: ${(resBody as { error?: string })?.error}`);
     return text("수정되었습니다.");
   }
 );
@@ -198,24 +178,14 @@ server.registerTool(
   {
     title: "항목 삭제",
     description: `로그인한 본인(${person}) 소유의 항목만 삭제할 수 있습니다.`,
-    inputSchema: { itemId: z.string().uuid() },
+    inputSchema: { itemId: z.string() },
   },
   async ({ itemId }) => {
-    if (!authenticated) return text("로그인이 필요합니다. login 도구를 먼저 사용하세요.");
-
-    const { data: existing, error: fetchErr } = await supabase
-      .from("content_items")
-      .select("person")
-      .eq("id", itemId)
-      .single();
-
-    if (fetchErr || !existing) return text("해당 항목을 찾을 수 없습니다.");
-    if (existing.person !== person) {
-      return text(`이 항목은 ${existing.person}의 항목이라 삭제할 수 없습니다.`);
-    }
-
-    const { error } = await supabase.from("content_items").delete().eq("id", itemId);
-    if (error) return text(`삭제 실패: ${error.message}`);
+    if (!sessionToken) return text("로그인이 필요합니다. login 도구를 먼저 사용하세요.");
+    const { ok, body: resBody } = await api(`/items/${encodeURIComponent(itemId)}`, {
+      method: "DELETE",
+    });
+    if (!ok) return text(`삭제 실패: ${(resBody as { error?: string })?.error}`);
     return text("삭제되었습니다.");
   }
 );

@@ -37,9 +37,13 @@ yarn-error.log*
 # vercel
 .vercel
 
-# mcp-server secrets (본인 PIN, service role 키) — 절대 커밋 금지
+# mcp-server secrets (본인 PIN, API 주소) — 절대 커밋 금지
 /mcp-server/.env
 /mcp-server/node_modules
+
+# server (백엔드): 런타임 SQLite 파일과 의존성은 커밋하지 않음
+/server/node_modules
+/server/data
 
 # typescript
 *.tsbuildinfo

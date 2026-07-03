@@ -4,52 +4,68 @@ Kanto 팀(박소유·김도혁·이동근·임태형)의 개발 과정을 정리
 
 배포: https://dohyuk-centric.github.io/kanto-retrospective/ (GitHub Pages, `master` push 시 자동 재배포)
 
-## 콘텐츠가 관리되는 두 가지 방식
+## 구성 요소 세 가지
 
-| 섹션 | 저장 방식 | 수정 방법 |
+| 구성 | 역할 | 배포 위치 |
 | --- | --- | --- |
-| 기능구현 / 문제해결 / AI 도구 활용법 | Supabase DB (`content_items` 테이블), 인물별 **여러 항목의 목록** | 아래 "MCP로 콘텐츠 추가·수정" |
-| 성능개선 / 심화자료 | `content/` 폴더의 정적 마크다운 파일 | 파일을 직접 수정 후 git push |
+| `/` (Next.js, 이 저장소 루트) | 프론트엔드. 정적 export로 빌드 | GitHub Pages |
+| `server/` | 콘텐츠 API 백엔드 (Express + SQLite) | Render (직접 배포 필요) |
+| `mcp-server/` | 팀원이 로컬에서 Claude Code에 연결해 콘텐츠를 쓰는 MCP 서버 | 각자 로컬 실행 |
 
-기능구현/문제해결/AI 도구 활용법은 한 사람이 여러 개의 항목(기능, 사례 등)을 가지므로 목록형으로 보여지고, 항목을 클릭하면 상세 내용이 나옵니다. 이 목록은 **빌드 시점이 아니라 브라우저에서 Supabase를 직접 조회**해서 보여주므로, DB에 항목을 추가/수정하면 사이트를 다시 배포하지 않아도 바로 반영됩니다.
+기능구현 / 문제해결 / AI 도구 활용법 섹션은 한 사람이 여러 개의 항목(기능, 사례 등)을 가지므로 목록형으로 보여지고, 항목을 클릭하면 상세 내용이 나옵니다. 이 목록은 **빌드 시점이 아니라 브라우저에서 백엔드 API를 직접 호출**해서 보여주므로, DB에 항목을 추가/수정하면 프론트엔드를 다시 배포하지 않아도 바로 반영됩니다.
 
-## 실행 (로컬 개발)
+성능개선 / 심화자료 섹션은 기존처럼 `content/` 폴더의 정적 마크다운 파일이며, 고치고 `git push`하면 GitHub Actions가 자동으로 다시 빌드·배포합니다.
+
+## 1. 백엔드 배포 (Render, 최초 1회 · 프로젝트장)
+
+1. [render.com](https://render.com) 가입 → New > Web Service
+2. 이 GitHub 저장소 연결, **Root Directory를 `server`로 지정**
+3. Build Command: `npm install`, Start Command: `npm start`
+4. Environment 탭에서 환경변수 등록:
+   ```
+   PINS_JSON={"박소유":"본인이 정한 4자리","김도혁":"...","이동근":"...","임태형":"..."}
+   ADMIN_SEED_TOKEN=아무 임의의 긴 문자열 (최초 이관 때만 사용)
+   CORS_ORIGINS=https://dohyuk-centric.github.io,http://localhost:3000,http://localhost:3100
+   ```
+5. 배포 후 나오는 URL(`https://xxxx.onrender.com`)을 기억해둡니다.
+
+**⚠️ 중요한 한계**: Render 무료 웹서비스는 디스크가 영속적이지 않을 수 있습니다. 재배포하거나 서비스가 재시작되면 SQLite 파일(`server/data/content.db`)의 내용이 초기화될 수 있습니다. 주기적으로 `GET /items`로 백업을 받아두거나, 데이터가 중요해지면 Render의 유료 Persistent Disk 또는 별도 관리형 DB로 옮기는 걸 권장합니다. 또한 무료 플랜은 15분간 요청이 없으면 슬립 상태가 되어, 첫 요청에 수십 초가 걸릴 수 있습니다.
+
+## 2. 최초 콘텐츠 이관 (Render 배포 후 1회)
+
+기존에 작성해둔 `content/features|troubleshooting|ai-usage/*.md`를 백엔드 DB로 옮깁니다.
+
+```bash
+cp .env.local.example .env.local   # API_BASE_URL, ADMIN_SEED_TOKEN 채우기
+npm run seed:content
+```
+
+이 스크립트는 각 마크다운 파일의 `##` 섹션을 항목 하나씩으로 쪼개서 서버에 넣습니다. 같은 사람·카테고리를 다시 실행하면 기존 항목을 지우고 새로 넣으므로, 이후로는 콘텐츠를 파일이 아니라 MCP로 관리하세요.
+
+## 3. 프론트엔드 로컬 실행
 
 ```bash
 npm install
-cp .env.local.example .env.local   # 값 채우기 (아래 "Supabase 준비" 참고)
+# .env.local에 NEXT_PUBLIC_API_BASE_URL=<Render 백엔드 URL> 도 채워져 있어야 합니다
 npm run dev
 ```
 
 `http://localhost:3000`에서 확인합니다. (원본 kanto 프로젝트를 로컬에서 같이 띄운다면 포트가 겹치니 `npm run dev -- -p 3100`처럼 다른 포트를 쓰세요.)
 
-## Supabase 준비 (최초 1회, 프로젝트장)
+## 4. GitHub Pages 배포에 백엔드 주소 연결
 
-1. [supabase.com](https://supabase.com)에서 새 프로젝트 생성
-2. SQL Editor에서 `supabase/schema.sql` 내용을 실행 → `content_items` 테이블과 읽기 전용 RLS 정책 생성
-3. Settings > API에서 Project URL, `anon` key, `service_role` key 확인
-4. 루트의 `.env.local`에 `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` 채우기
-5. 기존 `content/features|troubleshooting|ai-usage/*.md`를 DB로 옮기기(최초 1회):
-   ```bash
-   npm run migrate:content
-   ```
-   이 스크립트는 각 마크다운 파일의 `##` 섹션을 항목 하나씩으로 쪼개서 `content_items`에 넣습니다. 같은 사람·카테고리를 다시 실행하면 기존 항목을 지우고 새로 넣으므로, 이후로는 콘텐츠를 파일이 아니라 MCP로 관리하세요.
+저장소 Settings > Secrets and variables > Actions에서 `NEXT_PUBLIC_API_BASE_URL`을 리포지토리 시크릿으로 등록하세요(Render 배포 URL). `.github/workflows/deploy.yml`이 빌드 시 이 값을 주입합니다.
 
-`anon` key는 읽기 전용 RLS로 보호되므로 `NEXT_PUBLIC_` 접두어로 공개돼도 안전합니다. **`service_role` key는 RLS를 완전히 우회하니 절대 커밋하거나 공유 채팅방 등에 올리지 마세요.**
+## 5. MCP로 콘텐츠 추가·수정 (팀원 각자)
 
-6. GitHub Pages 배포 빌드에도 같은 공개 키가 필요합니다. 저장소 Settings > Secrets and variables > Actions에서 `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`를 리포지토리 시크릿으로 등록하세요.
-
-## MCP로 콘텐츠 추가·수정 (팀원 각자)
-
-이 저장소에는 `content_items`를 다루는 전용 MCP 서버(`mcp-server/`)가 있습니다. Claude Code에 연결하면, 자기 이름 + PIN으로 인증한 뒤 **자기 항목만** 추가/수정/삭제할 수 있습니다.
+`mcp-server/`는 백엔드 API를 호출하는 MCP 서버입니다. Claude Code에 연결하면, 자기 이름 + PIN으로 인증한 뒤 **자기 항목만** 추가/수정/삭제할 수 있습니다.
 
 1. `mcp-server/.env.example`을 `mcp-server/.env`로 복사
 2. 본인 값 채우기:
    ```env
-   SUPABASE_URL=...          # 프로젝트장에게 받기
-   SUPABASE_SERVICE_ROLE_KEY=...   # 프로젝트장에게 받기
-   MCP_PERSON=박소유          # 본인 이름
-   MCP_PIN=1234              # 프로젝트장에게 받은 본인 PIN (남에게 공유 금지)
+   API_BASE_URL=https://xxxx.onrender.com   # 프로젝트장에게 받은 Render 배포 URL
+   MCP_PERSON=박소유                          # 본인 이름
+   MCP_PIN=1234                              # 프로젝트장에게 받은 본인 PIN
    ```
 3. 루트의 `.mcp.json`은 이미 이 MCP 서버를 등록해뒀으므로, 이 저장소를 Claude Code로 열면 자동으로 연결됩니다(`kanto-retrospective-content`).
 4. Claude Code에서 다음처럼 사용:
@@ -59,7 +75,7 @@ npm run dev
    - `update_item` 으로 본인 항목만 수정 (다른 사람 항목은 거부됨)
    - `delete_item` 으로 본인 항목만 삭제
 
-PIN은 4자리 숫자로, 강한 보안이 아니라 "실수로 남의 항목을 건드리지 않기 위한" 가벼운 팀 내부 잠금입니다. `mcp-server/.env`는 git에 커밋되지 않으니, 본인 PIN과 service role 키는 카톡/디스코드 등 별도 채널로 프로젝트장에게 직접 받으세요.
+PIN은 4자리 숫자로, 강한 보안이 아니라 "실수로 남의 항목을 건드리지 않기 위한" 가벼운 팀 내부 잠금입니다. `mcp-server/.env`는 git에 커밋되지 않으니, 본인 PIN은 카톡/디스코드 등 별도 채널로 프로젝트장에게 직접 받으세요.
 
 ## 정적 마크다운 섹션 (성능개선 / 심화자료)
 
@@ -80,14 +96,17 @@ summary: 목록 카드에 보일 한 줄 요약
 본문 마크다운...
 ```
 
-파일을 고치고 `git push`하면 GitHub Actions가 자동으로 다시 빌드·배포합니다.
-
 ## 특히 다듬어야 할 부분
 
 AI 도구 활용법 항목들은 커밋 로그와 작업기록 문서에서 유추한 **초안**입니다. 실제 경험과 다르면 MCP의 `update_item`으로 직접 고쳐주세요.
 
-## 배포 구조
+## 로컬 개발 시 백엔드도 같이 띄우기
 
-- 프론트엔드: GitHub Pages (`output: "export"` 정적 export, `.github/workflows/deploy.yml`)
-- DB: Supabase (`content_items` 테이블, anon key로 브라우저에서 읽기)
-- 쓰기: 로컬에서 실행하는 MCP 서버가 service role 키로 직접 씀 (배포 파이프라인과 무관 — 재배포 없이 즉시 반영)
+```bash
+cd server
+cp .env.example .env   # PINS_JSON 등 채우기 (테스트용 아무 값이나 가능)
+npm install
+npm run dev
+```
+
+기본 포트는 3300이며, 프론트엔드 `.env.local`의 `NEXT_PUBLIC_API_BASE_URL=http://localhost:3300`로 맞추면 로컬 DB로 테스트할 수 있습니다.

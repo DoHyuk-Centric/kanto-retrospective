@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { supabase, ContentItem } from "@/lib/supabaseClient";
+import { listItems, ContentItem, ContentItemSummary } from "@/lib/apiClient";
 import { getPerson } from "@/lib/people";
 import { colorMap } from "@/lib/colors";
 
@@ -17,23 +17,19 @@ export default function ItemListPage({
   basePath: string;
   backLabel: string;
 }) {
-  const [items, setItems] = useState<ContentItem[] | null>(null);
+  const [items, setItems] = useState<ContentItemSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const personInfo = getPerson(person);
   const c = colorMap[personInfo?.color ?? "teal"] ?? colorMap.teal;
 
   useEffect(() => {
     let cancelled = false;
-    supabase
-      .from("content_items")
-      .select("*")
-      .eq("category", category)
-      .eq("person", person)
-      .order("sort_order", { ascending: true })
-      .then(({ data, error }) => {
-        if (cancelled) return;
-        if (error) setError(error.message);
-        else setItems(data as ContentItem[]);
+    listItems(category, person)
+      .then((data) => {
+        if (!cancelled) setItems(data);
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err.message ?? String(err));
       });
     return () => {
       cancelled = true;

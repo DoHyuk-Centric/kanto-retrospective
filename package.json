@@ -7,10 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "migrate:content": "tsx scripts/migrate-content-to-supabase.ts"
+    "seed:content": "tsx scripts/seed-content.ts"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.110.0",
     "@tailwindcss/typography": "^0.5.20",
     "clsx": "^2.1.1",
     "gray-matter": "^4.0.3",
