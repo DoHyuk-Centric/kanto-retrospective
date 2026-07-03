@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Link from "next/link";
 import "./globals.css";
 import Nav from "@/components/Nav";
 
@@ -33,8 +34,10 @@ export default function RootLayout({
         <Nav />
         <main className="flex-1">{children}</main>
         <footer className="border-t border-black/5 py-8 text-center text-xs text-foreground/50 dark:border-white/10">
-          Kanto 팀 개발 회고 아카이브 · 콘텐츠는 이 저장소의{" "}
-          <code>content/</code> 폴더 마크다운 파일을 직접 수정해 갱신합니다.
+          Kanto 팀 개발 회고 아카이브 ·{" "}
+          <Link href="/setup" className="hover:text-teal hover:underline">
+            팀원이신가요? MCP로 콘텐츠 편집하는 방법
+          </Link>
         </footer>
       </body>
     </html>
