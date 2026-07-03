@@ -1,0 +1,34 @@
+[
+  {
+    "slug": "박소유",
+    "name": "박소유",
+    "role": "팀장 · PM",
+    "github": "soyupark1997",
+    "summary": "팀장으로서 대부분의 PR을 병합하고, 관리자 페이지·중고거래·컴포넌트 공통화를 주로 맡았습니다.",
+    "color": "teal"
+  },
+  {
+    "slug": "김도혁",
+    "name": "김도혁",
+    "role": "팀원",
+    "github": "DoHyuk-Centric",
+    "summary": "구인구직·관리자·비즈니스 페이지를 중심으로 가장 많은 커밋을 남겼고, 리뷰 개선 작업을 주도했습니다.",
+    "color": "amber"
+  },
+  {
+    "slug": "이동근",
+    "name": "이동근",
+    "role": "팀원",
+    "github": "dongkeun99",
+    "summary": "구인구직·중고거래·칸토Go 모임 기능과 공통 컴포넌트 작업을 맡았습니다.",
+    "color": "sky"
+  },
+  {
+    "slug": "임태형",
+    "name": "임태형",
+    "role": "팀원",
+    "github": "THLIMM",
+    "summary": "관리자 페이지·채팅·렌탈 기능을 중심으로 작업했습니다.",
+    "color": "rose"
+  }
+]

@@ -1,36 +1,49 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Kanto Retrospective
 
-## Getting Started
+Kanto 팀(박소유·김도혁·이동근·임태형)의 개발 과정을 정리한 회고/포트폴리오 사이트입니다. 기능구현, 문제해결, 성능개선, AI 도구 활용법, 심화자료(gitflow·코드리뷰 문화·SEO·테스트 전략 등) 5개 섹션으로 구성돼 있습니다.
 
-First, run the development server:
+## 실행
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`http://localhost:3000`에서 확인합니다. (원본 kanto 프로젝트를 로컬에서 같이 띄운다면 포트가 겹치니 `npm run dev -- -p 3100`처럼 다른 포트를 쓰세요.)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 콘텐츠 수정 방법
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+이 사이트의 모든 글은 코드가 아니라 `content/` 폴더의 마크다운 파일입니다. **여기를 직접 수정하고 다시 배포하면 바로 반영됩니다.**
 
-## Learn More
+```
+content/
+├── people.json          # 팀원 목록(이름, 역할, 소개, 색상)
+├── features/{이름}.md    # 기능구현 — 인물별 1개 파일
+├── troubleshooting/{이름}.md  # 문제해결 — 인물별 1개 파일
+├── ai-usage/{이름}.md    # AI 도구 활용법 — 인물별 1개 파일 (초안, 직접 다듬어야 함)
+├── performance/          # 성능개선 — 기능/주제별 파일 (overview.md는 방법론)
+└── strategy/             # 심화자료 — 주제별 파일 (gitflow, seo전략, 리뷰문화 등)
+```
 
-To learn more about Next.js, take a look at the following resources:
+- `features`/`troubleshooting`/`ai-usage`는 파일명이 `people.json`의 `slug`(이름)와 정확히 일치해야 합니다.
+- `performance`/`strategy`는 파일명이 자유로운 slug이며, 파일 상단에 frontmatter로 제목과 요약을 답니다:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```markdown
+---
+title: 페이지 제목
+summary: 목록 카드에 보일 한 줄 요약
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+본문 마크다운...
+```
 
-## Deploy on Vercel
+- 마크다운 문법(굵게, 목록, 인용구, 표, 코드블록)은 모두 지원됩니다.
+- 새 팀원이나 새 주제를 추가하려면 파일만 새로 만들면 됩니다(라우트는 자동 생성됩니다).
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 특히 다듬어야 할 부분
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+`content/ai-usage/*.md`는 커밋 로그와 작업기록 문서에서 유추한 **초안**입니다. 실제 AI 도구 활용 경험과 다르면 반드시 직접 수정해주세요. 각 파일 하단에 "여기에 직접 채워주세요" 섹션을 남겨뒀습니다.
+
+## 배포
+
+Vercel에 이 저장소를 연결하면 됩니다. 별도 데이터베이스나 환경변수가 필요 없습니다(전부 정적 마크다운 기반).
