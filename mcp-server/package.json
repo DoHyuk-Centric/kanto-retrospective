@@ -1,0 +1,22 @@
+{
+  "name": "kanto-retrospective-mcp",
+  "version": "1.0.0",
+  "description": "Kanto Retrospective 콘텐츠(기능구현/문제해결/AI활용법)를 PIN 인증 후 추가·수정하는 MCP 서버",
+  "main": "src/index.ts",
+  "scripts": {
+    "start": "tsx src/index.ts"
+  },
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@supabase/supabase-js": "^2.110.0",
+    "dotenv": "^17.4.2",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.0",
+    "tsx": "^4.23.0",
+    "typescript": "^6.0.3"
+  }
+}

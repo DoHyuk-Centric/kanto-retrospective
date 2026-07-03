@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "kanto-retrospective-content": {
+      "command": "npx",
+      "args": ["tsx", "mcp-server/src/index.ts"]
+    }
+  }
+}

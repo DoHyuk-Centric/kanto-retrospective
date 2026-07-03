@@ -6,9 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "migrate:content": "tsx scripts/migrate-content-to-supabase.ts"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.110.0",
     "@tailwindcss/typography": "^0.5.20",
     "clsx": "^2.1.1",
     "gray-matter": "^4.0.3",
@@ -24,9 +26,11 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^17.4.2",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
     "tailwindcss": "^4",
+    "tsx": "^4.23.0",
     "typescript": "^5"
   }
 }

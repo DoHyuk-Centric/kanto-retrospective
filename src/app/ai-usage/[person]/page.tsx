@@ -1,4 +1,4 @@
-import PersonDocPage from "@/components/PersonDocPage";
+import ItemListPage from "@/components/ItemListPage";
 import { people } from "@/lib/content";
 
 export function generateStaticParams() {
@@ -12,9 +12,9 @@ export default async function Page({
 }) {
   const { person } = await params;
   return (
-    <PersonDocPage
+    <ItemListPage
       category="ai-usage"
-      slug={decodeURIComponent(person)}
+      person={decodeURIComponent(person)}
       basePath="/ai-usage"
       backLabel="AI 도구 활용법 전체 보기"
     />

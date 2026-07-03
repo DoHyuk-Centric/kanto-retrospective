@@ -1,24 +1,11 @@
 import fs from "fs";
 import path from "path";
 import matter from "gray-matter";
-import peopleData from "../../content/people.json";
+
+export { people, getPerson } from "./people";
+export type { Person } from "./people";
 
 const CONTENT_DIR = path.join(process.cwd(), "content");
-
-export type Person = {
-  slug: string;
-  name: string;
-  role: string;
-  github: string;
-  summary: string;
-  color: string;
-};
-
-export const people = peopleData as Person[];
-
-export function getPerson(slug: string): Person | undefined {
-  return people.find((p) => p.slug === slug);
-}
 
 export type Doc = {
   slug: string;
